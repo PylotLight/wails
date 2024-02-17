@@ -1,0 +1,53 @@
+# https://taskfile.dev
+
+version: "3"
+
+tasks:
+  install-deps:
+    internal: true
+    sources:
+      - package.json
+    cmds:
+      - npm install
+
+  test:
+    cmds:
+      - npx vitest run
+
+  update:
+    cmds:
+      - npx npm-check-updates -u
+
+  build:debug:
+    internal: true
+    cmds:
+      - npx esbuild@latest desktop/compiled/main.js --bundle --tree-shaking=true --sourcemap=inline --outfile=../commands/build_assets/runtime/runtime.debug.js --define:DEBUG=true
+
+  build:production:
+    internal: true
+    cmds:
+      - npx esbuild@latest desktop/compiled/main.js --bundle --tree-shaking=true --minify --outfile=../commands/build_assets/runtime/runtime.js --define:DEBUG=false --drop:console
+
+  build:all:
+    internal: true
+    deps:
+      - build:debug
+      - build:production
+
+    cmds:
+      - cmd: wails3 tool cp ../commands/build_assets/runtime/runtime.js ../../examples/frameless/assets/runtime.js
+      - cmd: wails3 tool cp ../commands/build_assets/runtime/runtime.js ../../examples/wml/assets/runtime.js
+      - cmd: wails3 tool cp ../commands/build_assets/runtime/runtime.js ../../internal/commands/build_assets/runtime/runtime.js
+      - cmd: wails3 tool cp ../commands/build_assets/runtime/runtime.js ../../pkg/application/assets/alpha/runtime.js
+      - cmd: echo "Build Complete."
+
+  build:
+    deps:
+      - install-deps
+    cmds:
+      - task: build:all
+
+  generate:events:
+    dir: ../../tasks/events
+    cmds:
+      - go run generate.go
